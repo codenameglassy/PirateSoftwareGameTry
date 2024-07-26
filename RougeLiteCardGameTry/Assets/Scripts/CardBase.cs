@@ -10,6 +10,7 @@ public class CardBase : MonoBehaviour
     private Camera mainCamera;
     [SerializeField] private SpriteRenderer[] cardParts;
     [SerializeField] private TextMeshPro[] textParts;
+    Sequence mySequence;
 
     [Header("Drag and Drop")]
     public float dragSmoothTime = 0.01f;
@@ -31,11 +32,23 @@ public class CardBase : MonoBehaviour
         Attack,
         Defense
     }
+    public enum SlotType
+    {
+        Player,
+        Cpu
+    }
+    public SlotType mySlotType;
+
+    
 
     private void Start()
     {
+        SpawnCard();
+
         mainCamera = Camera.main;
-        DropCard();
+        mySequence = DOTween.Sequence();
+        //DropCard();
+     
     }
 
     // Update is called once per frame
@@ -56,26 +69,111 @@ public class CardBase : MonoBehaviour
         }
     }
 
+    private void OnMouseOver()
+    {
+        if (mySlotType == SlotType.Cpu)
+        {
+            Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+
+        if(mySequence != null)
+        {
+            mySequence.Kill();
+        }
+        
+        if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
+        {
+            Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
+            return;
+        }
+        mySequence.Append(transform.DOScale(new Vector2(1.1f, 1.1f), 0.3f));
+    }
+
+    private void OnMouseExit()
+    {
+        if (mySlotType == SlotType.Cpu)
+        {
+            Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+
+        mySequence.Append(transform.DOScale(new Vector2(1f, 1f), 0.3f));
+    }
+
     private void OnMouseDown()
     {
+        if(mySlotType == SlotType.Cpu)
+        {
+            Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+        if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
+        {
+            Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
+            return;
+        }
         PickCard();
-        SetSortingLayer(picked);
+       
     }
 
     private void OnMouseDrag()
     {
+        if (mySlotType == SlotType.Cpu)
+        {
+            Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+        if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
+        {
+            Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
+            return;
+        }
         DragCard();
     }
 
     private void OnMouseUp()
     {
+        if (mySlotType == SlotType.Cpu)
+        {
+            Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+        if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
+        {
+            Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
+            return;
+        }
         ResetAlpha();
         DropCard();
-        SetSortingLayer(placed);
+        
     }
 
+    private void SpawnCard()
+    {
+        GameControl.instance.currentCardsInScene.Add(this);
+        SetSortingLayer(picked);
+        isDragging = false;
+        StartCoroutine(SmoothSpawnToClosestPoint(.15f, mySlotType));
+        transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
+        return;
+    }
+
+    public void DespawnCard()
+    {
+        //GameControl.instance.currentCardsInScene.Remove(this);
+
+        if (currentSlotBase != null)
+        {
+            currentSlotBase.SetOccupied(false);
+        }
+       
+        Destroy(gameObject);
+    }
 
     #region Drag and Drop Card
+
+
 
     void PickCard()
     {
@@ -93,12 +191,13 @@ public class CardBase : MonoBehaviour
         offset = transform.position - GetMouseWorldPosition();
         isDragging = true;
         transform.DOScale(new Vector2(1.2f, 1.2f), 0.3f).SetEase(Ease.OutBounce);
+        SetSortingLayer(picked);
     }
 
     void DropCard()
     {
         isDragging = false;
-        StartCoroutine(SmoothSnapToClosestPoint());
+        StartCoroutine(SmoothSnapToClosestPoint(snapSmoothTime));
         transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
     }
 
@@ -119,10 +218,7 @@ public class CardBase : MonoBehaviour
         return mainCamera.ScreenToWorldPoint(mousePoint);
     }
 
-    
-   
-
-    private IEnumerator SmoothSnapToClosestPoint()
+    private IEnumerator SmoothSnapToClosestPoint(float snapSmoothTime_)
     {
         float minDistance = Mathf.Infinity;
         Transform closestPoint = null;
@@ -148,13 +244,13 @@ public class CardBase : MonoBehaviour
             Vector3 targetPosition = closestPoint.position;
             float elapsedTime = 0f;
 
-            while (elapsedTime < snapSmoothTime)
+            while (elapsedTime < snapSmoothTime_)
             {
-                transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / snapSmoothTime);
+                transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / snapSmoothTime_);
                 elapsedTime += Time.deltaTime;
                 yield return null;
             }
-
+            SetSortingLayer(placed);
             transform.position = targetPosition;
             //GameControl.instance.IncrementOfSnapPointIndex(); //increase currentSnapIndex and set current three snap points...
             GameControl.instance.closestSnapPoint_ = null;
@@ -168,47 +264,156 @@ public class CardBase : MonoBehaviour
             currentSlotBase.SetOccupied(true);
 
             AdjustEnergyOnSlotChange();
+        }
+    }
+
+    private IEnumerator SmoothSpawnToClosestPoint(float snapSmoothTime_, SlotType mySlotType_)
+    {
+        float minDistance = Mathf.Infinity;
+        Transform closestPoint = null;
+        List<Transform> mySnapPoints = new List<Transform>();
+
+        switch (mySlotType_)
+        {
+            case SlotType.Player:
+                mySnapPoints = GameControl.instance.playerHandSnapPoints;
+                break;
+
+            case SlotType.Cpu:
+                mySnapPoints = GameControl.instance.currentThreeSnapPointsCpu;
+                break;
+        }
+
+        //yield return new WaitForSeconds(0.1f);
+
+        foreach (Transform snapPoint in mySnapPoints)
+        {
+            // Check if the snap point is not occupied
+            if (!snapPoint.GetComponent<SlotBase>().isOccupied)
+            {
+                float distance = Vector3.Distance(transform.position, snapPoint.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestPoint = snapPoint;
+                    GameControl.instance.closestSnapPoint_ = snapPoint;
+                }
+            }
+        }
+
+        if (closestPoint != null)
+        {
+            Vector3 startPosition = transform.position;
+            Vector3 targetPosition = closestPoint.position;
+            float elapsedTime = 0f;
+
+            while (elapsedTime < snapSmoothTime_)
+            {
+                transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / snapSmoothTime_);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+
+            transform.position = targetPosition;
+            SetSortingLayer(placed);
+            //GameControl.instance.IncrementOfSnapPointIndex(); //increase currentSnapIndex and set current three snap points...
+            GameControl.instance.closestSnapPoint_ = null;
+
+            if (currentSlotBase != null)
+            {
+                previousSlotBase = currentSlotBase;
+            }
+
+            currentSlotBase = closestPoint.GetComponent<SlotBase>();
+            currentSlotBase.SetOccupied(true);
+
+            AdjustEnergyOnSlotChange();
 
         }
     }
 
-    private void SetCurrentSlot(SlotBase newSlotBase)
+   /* private void SetCurrentSlot(SlotBase newSlotBase)
     {
         previousSlotBase = currentSlotBase;
         currentSlotBase = newSlotBase;
 
         AdjustEnergyOnSlotChange();
+    }*/
+
+    public void SetSortingLayer(string layerName)
+    {
+        for (int i = 0; i < cardParts.Length; i++)
+        {
+            // Change the sorting layer
+            cardParts[i].sortingLayerName = layerName;
+        }
+        for (int i = 0; i < textParts.Length; i++)
+        {
+            textParts[i].sortingLayerID = SortingLayer.NameToID(layerName);
+        }
     }
+
+    #endregion
+
+    #region Card Energy
 
     private void AdjustEnergyOnSlotChange()
     {
-        if (previousSlotBase == null || currentSlotBase == null)
-            return;
-
-        if (previousSlotBase.slotType != currentSlotBase.slotType)
+       
+        switch (mySlotType)
         {
-            CheckCardType();
+            case SlotType.Player:
+
+                if (previousSlotBase == null || currentSlotBase == null)
+                    return;
+
+                if (previousSlotBase.slotType != currentSlotBase.slotType)
+                {
+                    CheckCardType();
+                }
+                break;
+
+            case SlotType.Cpu:
+                if (currentSlotBase == null)
+                    return;
+
+                CheckCardType();
+                break;
         }
+
     }
 
     private void CheckCardType()
     {
         Debug.Log("Adjusting Slot");
-        switch (currentSlotBase.slotType)
+
+        switch (mySlotType)
         {
-            case SlotBase.SlotType.CardSlot:
-                GameControl.instance.TakeEnergy(cardEnergy);
+            case SlotType.Player:
+
+                switch (currentSlotBase.slotType)
+                {
+                    case SlotBase.SlotType.CardSlot:
+                        GameControl.instance.TakeEnergy(cardEnergy);
+                        IncreaseCardPowerToStat();
+                        break;
+
+                    case SlotBase.SlotType.HandSlot:
+                        GameControl.instance.AddEnergy(cardEnergy);
+                        DecreaseCardPowerToStat();
+                        break;
+
+                }
+
+                break;
+
+            case SlotType.Cpu:
                 IncreaseCardPowerToStat();
-                break;
 
-            case SlotBase.SlotType.HandSlot:
-                GameControl.instance.AddEnergy(cardEnergy);
-                DecreaseCardPowerToStat();
                 break;
-
         }
-    }
 
+    }
     #endregion
 
     #region Slot Alpha
@@ -259,45 +464,63 @@ public class CardBase : MonoBehaviour
     }
     #endregion
 
-    public void SetSortingLayer(string layerName)
-    {
-        for (int i = 0; i < cardParts.Length; i++)
-        {
-            // Change the sorting layer
-            cardParts[i].sortingLayerName = layerName;
-        }
-        for (int i = 0; i < textParts.Length; i++)
-        {
-            textParts[i].sortingLayerID = SortingLayer.NameToID(layerName);
-        }
-    }
-
+    #region Card Power
     public void IncreaseCardPowerToStat()
     {
-        switch (myCardType)
+        switch (mySlotType)
         {
-            case CardTypes.Attack:
-                GameControl.instance.IncreasePlayerAttack(cardPower);
+            case SlotType.Player:
+                switch (myCardType)
+                {
+                    case CardTypes.Attack:
+                        GameControl.instance.IncreasePlayerAttack(cardPower);
+                        break;
+
+                    case CardTypes.Defense:
+                        GameControl.instance.IncreasePlayerDefense(cardPower);
+                        break;
+                }
                 break;
 
-            case CardTypes.Defense:
-                GameControl.instance.IncreasePlayerDefense(cardPower);
+            case SlotType.Cpu:
+                switch (myCardType)
+                {
+                    case CardTypes.Attack:
+                        GameControl.instance.IncreaseCpuAttack(cardPower);
+                        break;
+
+                    case CardTypes.Defense:
+                        GameControl.instance.IncreaseCpuDefense(cardPower);
+                        break;
+                }
                 break;
         }
+        
     }
 
     public void DecreaseCardPowerToStat()
     {
-        switch (myCardType)
+        switch (mySlotType)
         {
-            case CardTypes.Attack:
-                GameControl.instance.DecreasePlayerAttack(cardPower);
+            case SlotType.Player:
+                switch (myCardType)
+                {
+                    case CardTypes.Attack:
+                        GameControl.instance.DecreasePlayerAttack(cardPower);
+                        break;
+
+                    case CardTypes.Defense:
+                        GameControl.instance.DecreasePlayerDefense(cardPower);
+                        break;
+                }
                 break;
 
-            case CardTypes.Defense:
-                GameControl.instance.DecreasePlayerDefense(cardPower);
+            case SlotType.Cpu:
+
                 break;
         }
+     
     }
+    #endregion
 
 }
