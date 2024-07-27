@@ -27,6 +27,8 @@ public class GameControl : MonoBehaviour
 
     [Header("Canvas")]
     public CanvasGroup fadeCanvas;
+    public GameObject gameover;
+    public GameObject gamewin;
 
     [Header("Gameplay - General")]
     public List<CardBase> currentCardsInScene = new List<CardBase>();
@@ -34,7 +36,8 @@ public class GameControl : MonoBehaviour
     {
         DrawingCard,
         PlayerTurn,
-        EndingTurn
+        EndingTurn,
+        GameEnd
     }
     public GameState currentGameState;
 
@@ -120,6 +123,7 @@ public class GameControl : MonoBehaviour
         //Cpu Attacks
         yield return Enum_CpuAttack();
         //reset stats
+        CameraShake.instance.ShakeCamera();
         yield return Enum_ResetTurn();
         //desapwn Cards
         yield return Enum_DespawnCards();
@@ -134,6 +138,11 @@ public class GameControl : MonoBehaviour
     IEnumerator Enum_PlayerAttack()
     {
         yield return null;
+
+        if (PlayerHealth.instance.GetCurrentHealth() <= 0)
+        {
+            yield break;
+        }
 
         //calculate damage
         int currentPlayerDamage = currentPlayerAttack - currentCpuDefense;
@@ -150,6 +159,12 @@ public class GameControl : MonoBehaviour
     IEnumerator Enum_CpuAttack()
     {
         yield return null;
+
+        if(EnemyHealth.instance.GetCurrentHealth() <= 0)
+        {
+           yield break;
+        }
+
         //calculate damage
         int currentCpuDamage = currentCpuAttack - currentPlayerDefense;
         if (currentCpuDamage <= 0)

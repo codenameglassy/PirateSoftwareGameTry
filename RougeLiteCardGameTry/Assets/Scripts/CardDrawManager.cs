@@ -23,12 +23,27 @@ public class CardDrawManager : MonoBehaviour
 
     public IEnumerator Enum_CpuDrawCard()
     {
-        CpuSpawnCard();
-        yield return new WaitForSeconds(0.5f);
-        CpuSpawnCard();
-        yield return new WaitForSeconds(0.5f);
-        CpuSpawnCard();
-        yield return new WaitForSeconds(0.5f);
+        int randomAttack = Random.Range(1, 3);
+
+        switch (randomAttack)
+        {
+
+            case 1:
+                CpuSpawnCard();
+                yield return new WaitForSeconds(0.5f);
+                break;
+
+            case 2:
+                CpuSpawnCard();
+                yield return new WaitForSeconds(0.5f);
+                CpuSpawnCard();
+                yield return new WaitForSeconds(0.5f);
+                break;
+            
+        }
+      
+        /* CpuSpawnCard();
+        yield return new WaitForSeconds(0.5f);*/
     }
 
     public IEnumerator Enum_PlayerDrawCard()
