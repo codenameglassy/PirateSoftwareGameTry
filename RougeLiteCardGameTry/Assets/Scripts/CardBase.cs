@@ -12,6 +12,7 @@ public class CardBase : MonoBehaviour
     [SerializeField] private TextMeshPro[] textParts;
     Sequence mySequence;
 
+
     [Header("Drag and Drop")]
     public float dragSmoothTime = 0.01f;
     public float snapSmoothTime = 0.01f;
@@ -22,6 +23,7 @@ public class CardBase : MonoBehaviour
     private SlotBase previousSlotBase;
 
     [Header("Card")]
+    public GameObject hitEffect;
     public int cardEnergy;
     public int cardPower;
     public string picked;
@@ -192,7 +194,16 @@ public class CardBase : MonoBehaviour
             currentSlotBase.SetOccupied(false);
         }
         GameControl.instance.currentCardsInPlay.Remove(this);
+     
         Destroy(gameObject);
+    }
+
+    public void HitEffect()
+    {
+        if (hitEffect != null)
+        {
+            Instantiate(hitEffect, transform.position, Quaternion.identity);
+        }
     }
 
     #region Drag and Drop Card
@@ -436,7 +447,8 @@ public class CardBase : MonoBehaviour
     private void CheckCardType(bool discard_)
     {
         Debug.Log("Adjusting Slot");
-
+      
+       
         switch (mySlotType)
         {
             case SlotType.Player:
@@ -444,6 +456,7 @@ public class CardBase : MonoBehaviour
                 switch (currentSlotBase.slotType)
                 {
                     case SlotBase.SlotType.CardSlot:
+                      
                         GameControl.instance.currentCardsInPlay.Add(this);
                         GameControl.instance.TakeEnergy(cardEnergy);
                         IncreaseCardPowerToStat(discard_);
@@ -462,6 +475,7 @@ public class CardBase : MonoBehaviour
                 break;
 
             case SlotType.Cpu:
+               
                 IncreaseCardPowerToStat(discard_);
 
                 break;

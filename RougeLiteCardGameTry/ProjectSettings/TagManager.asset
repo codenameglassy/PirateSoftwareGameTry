@@ -3,7 +3,8 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - FxTemporaire
   layers:
   - Default
   - TransparentFX
@@ -52,4 +53,7 @@ TagManager:
     locked: 0
   - name: Card Picked
     uniqueID: 139015175
+    locked: 0
+  - name: Vfx
+    uniqueID: 1900468729
     locked: 0

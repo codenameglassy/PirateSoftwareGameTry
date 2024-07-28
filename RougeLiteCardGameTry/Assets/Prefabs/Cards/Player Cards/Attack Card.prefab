@@ -446,6 +446,7 @@ MonoBehaviour:
   - {fileID: 1245757276912851609}
   dragSmoothTime: 0.01
   snapSmoothTime: 0.01
+  hitEffect: {fileID: 1590645654980816, guid: 6643b0f337df9be4da7cac8152b58de8, type: 3}
   cardEnergy: 1
   cardPower: 10
   picked: Card Picked

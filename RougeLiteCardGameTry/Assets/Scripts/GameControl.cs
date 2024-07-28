@@ -195,6 +195,13 @@ public class GameControl : MonoBehaviour
         CameraShake.instance.ShakeCamera();
         yield return Enum_ResetTurn();
         //desapwn Cards
+        for (int i = 0; i < currentCardsInPlay.Count; i++)
+        {
+            if(currentCardsInPlay[i].myCardType == CardBase.CardTypes.Attack)
+            {
+                currentCardsInPlay[i].HitEffect();
+            }
+        }
         yield return Enum_DespawnCards();
 
         currentCardsInScene.Clear();
