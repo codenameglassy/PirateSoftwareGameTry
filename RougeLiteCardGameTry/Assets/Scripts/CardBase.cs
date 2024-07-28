@@ -91,6 +91,7 @@ public class CardBase : MonoBehaviour
         
         if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
         {
+           
             Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
             return;
         }
@@ -121,6 +122,7 @@ public class CardBase : MonoBehaviour
         }
         if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
         {
+            GameControl.instance.noEnergy.SetActive(true);
             Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
             return;
         }
@@ -472,7 +474,7 @@ public class CardBase : MonoBehaviour
 
     private void SetClosestSnapPoint()
     {
-        Transform closestTarget = null;
+       /* Transform closestTarget = null;
         float closestDistance = Mathf.Infinity;
         Vector3 currentPosition = transform.position;
 
@@ -503,16 +505,16 @@ public class CardBase : MonoBehaviour
             {
                 slotBase.SetAlpha(GameControl.instance.defaultAlpha);
             }
-        }
+        }*/
 
     }
 
     public void ResetAlpha()
     {
-        foreach (Transform target in GameControl.instance.currentThreeSnapPoints)
+     /*   foreach (Transform target in GameControl.instance.currentThreeSnapPoints)
         {
             target.GetComponent<SlotBase>().SetAlpha(GameControl.instance.defaultAlpha);
-        }
+        }*/
     }
     #endregion
 

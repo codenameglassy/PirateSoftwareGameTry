@@ -29,9 +29,11 @@ public class GameControl : MonoBehaviour
     public CanvasGroup fadeCanvas;
     public GameObject gameover;
     public GameObject gamewin;
+    public GameObject noEnergy;
 
     [Header("Gameplay - General")]
     public GameObject discardButton;
+    public GameObject endTurnButton;
     public List<CardBase> currentCardsInScene = new List<CardBase>();
     public List<CardBase> currentCardsInPlay = new List<CardBase>();
     public enum GameState
@@ -64,6 +66,7 @@ public class GameControl : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        endTurnButton.SetActive(false);
         currentEnergy = maxEnergy;
         energyAmountText.text = currentEnergy.ToString();
         energyAmountText_.text = currentEnergy.ToString();
@@ -83,6 +86,15 @@ public class GameControl : MonoBehaviour
         {
             float waitingTimerMax = .2f; // 70ms
             waitingTimer = waitingTimerMax;
+
+            if(currentEnergy <= 0 || currentCardsInPlay.Count >= 3)
+            {
+                noEnergy.SetActive(true);
+            }
+            else
+            {
+                noEnergy.SetActive(false);
+            }
 
             if(currentGameState == GameState.DiscardingCard || currentGameState == GameState.EndingTurn)
             {
@@ -123,6 +135,8 @@ public class GameControl : MonoBehaviour
         yield return CardDrawManager.instance.Enum_PlayerDrawCard(); //Draw Player Card
         yield return Enum_TweenButtons(); // Show Buttons
         currentGameState = GameState.PlayerTurn;
+        
+        endTurnButton.SetActive(true);
     }
 
     public void DiscardCards()
@@ -169,6 +183,8 @@ public class GameControl : MonoBehaviour
     IEnumerator Enum_EndTurn()
     {
         currentGameState = GameState.EndingTurn;
+        endTurnButton.SetActive(false);
+        discardButton.SetActive(false);
         Debug.Log("Ending Turn");
 
         //attack player

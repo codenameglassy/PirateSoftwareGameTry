@@ -68,18 +68,21 @@ public class CardDrawManager : MonoBehaviour
         {
 
             case EnemyAttackState.Attack:
+                yield return new WaitForSeconds(0.9f);
                 CpuSpawnCard();
-                yield return new WaitForSeconds(0.5f);
+            
                 break;
 
             case EnemyAttackState.HeavyAttack:
+                yield return new WaitForSeconds(0.9f);
                 CpuSpawnCard();
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.9f);
                 CpuSpawnCard();
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(0.9f);
                 break;
 
             case EnemyAttackState.Defend:
+                yield return new WaitForSeconds(0.9f);
                 CpuSpawnCard();
                 break;
 
@@ -91,12 +94,13 @@ public class CardDrawManager : MonoBehaviour
 
     public IEnumerator Enum_PlayerDrawCard()
     {
+        yield return new WaitForSeconds(0.9f);
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.6f);
+        yield return new WaitForSeconds(0.9f);
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.6f);
+        yield return new WaitForSeconds(0.9f);
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.6f);
+        yield return new WaitForSeconds(0.9f);
         PlayerSpawnCard();
     }
     public void PlayerDrawCard()
