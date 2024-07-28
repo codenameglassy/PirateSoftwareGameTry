@@ -6,10 +6,27 @@ public class CardDrawManager : MonoBehaviour
 {
     public static CardDrawManager instance;
 
+    [Header("Card Withdraw - General")]
     public List<CardBase> playerAvailableCards = new List<CardBase>();
     public List<CardBase> cpuAvailableCards = new List<CardBase>();
     public Transform cardSpawnPos, cardSpawnPosCpu;
-    
+
+    [Header("Enemy")]
+    [Range(0,1)]
+    public float lightAttackProbability = 0.6f;
+    [Range(0, 1)]
+    public float heavyAttackProbability = 0.2f;
+    [Range(0, 1)]
+    public float defendProbability = 0.2f;
+    public enum EnemyAttackState 
+    {
+        Attack,
+        Defend,
+        HeavyAttack
+    }
+    public EnemyAttackState currentEnemyAttackState;
+    public CardBase enemyDefendCard;
+
     private void Awake()
     {
         instance = this;
@@ -19,27 +36,53 @@ public class CardDrawManager : MonoBehaviour
        
     }
 
-   
+    public void GetRandomAttack()
+    {
+        float total = lightAttackProbability + heavyAttackProbability + defendProbability;
+        float randomPoint = Random.value * total;
+
+        if (randomPoint < lightAttackProbability)
+        {
+            // "Light Attack";
+            currentEnemyAttackState = EnemyAttackState.Attack;
+        }
+        else if (randomPoint < lightAttackProbability + heavyAttackProbability)
+        {
+            // "Heavy Attack";
+            currentEnemyAttackState = EnemyAttackState.HeavyAttack;
+        }
+        else
+        {
+            // "defend Attack";
+            currentEnemyAttackState = EnemyAttackState.Defend;
+        }
+    }
+
 
     public IEnumerator Enum_CpuDrawCard()
     {
-        int randomAttack = Random.Range(1, 3);
+        //int randomAttack = Random.Range(1, 3);
+        GetRandomAttack();
 
-        switch (randomAttack)
+        switch (currentEnemyAttackState)
         {
 
-            case 1:
+            case EnemyAttackState.Attack:
                 CpuSpawnCard();
                 yield return new WaitForSeconds(0.5f);
                 break;
 
-            case 2:
+            case EnemyAttackState.HeavyAttack:
                 CpuSpawnCard();
                 yield return new WaitForSeconds(0.5f);
                 CpuSpawnCard();
                 yield return new WaitForSeconds(0.5f);
                 break;
-            
+
+            case EnemyAttackState.Defend:
+                CpuSpawnCard();
+                break;
+
         }
       
         /* CpuSpawnCard();
@@ -49,11 +92,11 @@ public class CardDrawManager : MonoBehaviour
     public IEnumerator Enum_PlayerDrawCard()
     {
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.6f);
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.6f);
         PlayerSpawnCard();
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(0.6f);
         PlayerSpawnCard();
     }
     public void PlayerDrawCard()
@@ -74,9 +117,16 @@ public class CardDrawManager : MonoBehaviour
 
     void CpuSpawnCard()
     {
+        if(currentEnemyAttackState == EnemyAttackState.Defend)
+        {
+            Instantiate(enemyDefendCard, cardSpawnPosCpu.position, Quaternion.identity);
+            return;
+        }
         int random = Random.Range(0, cpuAvailableCards.Count);
         Instantiate(cpuAvailableCards[random], cardSpawnPosCpu.position, Quaternion.identity);
     }
 
 
 }
+
+

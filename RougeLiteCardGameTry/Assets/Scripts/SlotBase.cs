@@ -28,6 +28,7 @@ public class SlotBase : MonoBehaviour
     private Transform checkCardPos;
     [SerializeField] private LayerMask whatIsCard;
     [SerializeField] private float checkCardRadius;
+    private float waitingTimer;
 
     private void Awake()
     {
@@ -39,25 +40,36 @@ public class SlotBase : MonoBehaviour
     }
     private void FixedUpdate()
     {
-        if(mySlotType_ == SlotType_.Cpu)
+        if (mySlotType_ == SlotType_.Cpu)
         {
             // return if enemy slot
             return;
         }
 
-        if (isOccupied)
+
+        waitingTimer -= Time.deltaTime;
+        if (waitingTimer <= 0)
         {
-            bool isCardStillThere = Physics2D.OverlapCircle(transform.position, checkCardRadius, whatIsCard);
-
-            if (isCardStillThere)
+            float waitingTimerMax = .2f; // 70ms
+            waitingTimer = waitingTimerMax;
+          
+            if (isOccupied)
             {
+                bool isCardStillThere = Physics2D.OverlapCircle(transform.position, checkCardRadius, whatIsCard);
 
+                if (isCardStillThere)
+                {
+
+                }
+                else
+                {
+                    isOccupied = false;
+                }
             }
-            else
-            {
-                isOccupied = false;
-            }
+
         }
+
+    
     }
     public void SetOccupied(bool bool_)
     {

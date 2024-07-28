@@ -31,11 +31,14 @@ public class GameControl : MonoBehaviour
     public GameObject gamewin;
 
     [Header("Gameplay - General")]
+    public GameObject discardButton;
     public List<CardBase> currentCardsInScene = new List<CardBase>();
+    public List<CardBase> currentCardsInPlay = new List<CardBase>();
     public enum GameState
     {
         DrawingCard,
         PlayerTurn,
+        DiscardingCard,
         EndingTurn,
         GameEnd
     }
@@ -71,9 +74,36 @@ public class GameControl : MonoBehaviour
         StartCoroutine(Enum_StartGame());
     }
 
+    // Update is called once per frame
+    private float waitingTimer;
+    private void FixedUpdate()
+    {
+        waitingTimer -= Time.deltaTime;
+        if (waitingTimer <= 0)
+        {
+            float waitingTimerMax = .2f; // 70ms
+            waitingTimer = waitingTimerMax;
+
+            if(currentGameState == GameState.DiscardingCard || currentGameState == GameState.EndingTurn)
+            {
+                discardButton.SetActive(false);
+                return;
+            }
+
+            if(currentCardsInPlay.Count <= 0)
+            {
+                discardButton.SetActive(false);
+            }
+            else
+            {
+                discardButton.SetActive(true);
+            }
+
+        }
+    }
 
     #region Gameplay
-    
+
     IEnumerator Enum_StartGame()
     {
         yield return new WaitForSeconds(2f);
@@ -92,6 +122,29 @@ public class GameControl : MonoBehaviour
         yield return CardDrawManager.instance.Enum_CpuDrawCard(); //Draw Cpu Card
         yield return CardDrawManager.instance.Enum_PlayerDrawCard(); //Draw Player Card
         yield return Enum_TweenButtons(); // Show Buttons
+        currentGameState = GameState.PlayerTurn;
+    }
+
+    public void DiscardCards()
+    {
+        StartCoroutine(Enum_DiscardCards());
+    }
+
+    IEnumerator Enum_DiscardCards()
+    {
+        currentGameState = GameState.DiscardingCard;
+
+        for (int i = 0; i < currentCardsInPlay.Count; i++)
+        {
+            currentCardsInPlay[i].DiscardCard();
+            yield return new WaitForSeconds(0.2f); // Delay between each discard
+        }
+        currentCardsInPlay.Clear();
+        ResetEnergy();
+        ResetPlayerStats();
+
+
+        yield return new WaitForSeconds(.6f);
         currentGameState = GameState.PlayerTurn;
     }
 
@@ -229,7 +282,24 @@ public class GameControl : MonoBehaviour
 
     public void IncreasePlayerAttack(int amountToIncrease)
     {
+        for (int i = 0; i < currentCardsInPlay.Count; i++)
+        {
+            if(currentCardsInPlay[i].myCardType == CardBase.CardTypes.Strength)
+            {
+                int amounToIncrease_ = amountToIncrease * 3;
+                currentPlayerAttack += amounToIncrease_;
+                playerAttackText.text = currentPlayerAttack.ToString();
+                return;
+            }
+        }
         currentPlayerAttack += amountToIncrease;
+        playerAttackText.text = currentPlayerAttack.ToString();
+    }
+
+    public void MultiplyPlayerAttack(int multiplyAmount)
+    {
+        int amounToIncrease = currentPlayerAttack * multiplyAmount;
+        currentPlayerAttack = amounToIncrease;
         playerAttackText.text = currentPlayerAttack.ToString();
     }
 
@@ -239,9 +309,36 @@ public class GameControl : MonoBehaviour
         playerAttackText.text = currentPlayerAttack.ToString();
     }
 
+    public void DemultiplyPlayerAttack(int demultiplyAmount)
+    {
+        int amountToDecrease = currentPlayerAttack / demultiplyAmount;
+        currentPlayerAttack = amountToDecrease;
+        playerAttackText.text = currentPlayerAttack.ToString();
+    }
+
     public void IncreasePlayerDefense(int amountToIncrease)
     {
+
+        for (int i = 0; i < currentCardsInPlay.Count; i++)
+        {
+            if (currentCardsInPlay[i].myCardType == CardBase.CardTypes.Dexterity)
+            {
+                int amounToIncrease_ = amountToIncrease * 3;
+                currentPlayerDefense += amounToIncrease_;
+                playerDefenseText.text = currentPlayerDefense.ToString();
+                return;
+            }
+           
+        }
         currentPlayerDefense += amountToIncrease;
+        playerDefenseText.text = currentPlayerDefense.ToString();
+
+    }
+
+    public void MultiplyPlayerDefense(int multiplyAmount)
+    {
+        int amountToIncrease = currentPlayerDefense * multiplyAmount;
+        currentPlayerDefense = amountToIncrease;
         playerDefenseText.text = currentPlayerDefense.ToString();
 
     }
@@ -251,6 +348,15 @@ public class GameControl : MonoBehaviour
         currentPlayerDefense -= amountToDecrease;
         playerDefenseText.text = currentPlayerDefense.ToString();
     }
+
+    public void DemultiplyPlayerDefense(int deMultiplyAmount)
+    {
+        int amountToDecrease = currentPlayerDefense / deMultiplyAmount;
+        currentPlayerDefense = amountToDecrease;
+        playerDefenseText.text = currentPlayerDefense.ToString();
+
+    }
+
 
     public void ResetPlayerStats() //Reset Player Stat
     {

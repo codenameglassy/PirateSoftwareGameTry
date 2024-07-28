@@ -30,7 +30,9 @@ public class CardBase : MonoBehaviour
     public enum CardTypes
     {
         Attack,
-        Defense
+        Defense,
+        Strength,
+        Dexterity
     }
     public enum SlotType
     {
@@ -38,7 +40,7 @@ public class CardBase : MonoBehaviour
         Cpu
     }
     public SlotType mySlotType;
-
+    bool isCardPlaced = false;
     
 
     private void Start()
@@ -77,6 +79,11 @@ public class CardBase : MonoBehaviour
             return;
         }
 
+        if (isCardPlaced)
+        {
+            return;
+        }
+
         if(mySequence != null)
         {
             mySequence.Kill();
@@ -108,6 +115,10 @@ public class CardBase : MonoBehaviour
             Debug.LogWarning("Cpu card, cannot interact");
             return;
         }
+        if (isCardPlaced)
+        {
+            return;
+        }
         if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
         {
             Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
@@ -122,6 +133,10 @@ public class CardBase : MonoBehaviour
         if (mySlotType == SlotType.Cpu)
         {
             Debug.LogWarning("Cpu card, cannot interact");
+            return;
+        }
+        if (isCardPlaced)
+        {
             return;
         }
         if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
@@ -139,12 +154,19 @@ public class CardBase : MonoBehaviour
             Debug.LogWarning("Cpu card, cannot interact");
             return;
         }
+        ResetAlpha();
+
+        if (isCardPlaced)
+        {
+            return;
+        }
+
         if (cardEnergy > GameControl.instance.GetCurrentEnergy() && currentSlotBase.slotType == SlotBase.SlotType.HandSlot && GameControl.instance.currentGameState == GameControl.GameState.PlayerTurn)
         {
             Debug.Log("Not enough energy" + cardEnergy + "/" + GameControl.instance.GetCurrentEnergy());
             return;
         }
-        ResetAlpha();
+       
         DropCard();
         
     }
@@ -154,9 +176,9 @@ public class CardBase : MonoBehaviour
         GameControl.instance.currentCardsInScene.Add(this);
         SetSortingLayer(picked);
         isDragging = false;
-        StartCoroutine(SmoothSpawnToClosestPoint(.15f, mySlotType));
-        transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
-        return;
+        StartCoroutine(SmoothSpawnToClosestPoint(.12f, mySlotType, false));
+        //transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
+        
     }
 
     public void DespawnCard()
@@ -167,7 +189,7 @@ public class CardBase : MonoBehaviour
         {
             currentSlotBase.SetOccupied(false);
         }
-       
+        GameControl.instance.currentCardsInPlay.Remove(this);
         Destroy(gameObject);
     }
 
@@ -197,7 +219,7 @@ public class CardBase : MonoBehaviour
     void DropCard()
     {
         isDragging = false;
-        StartCoroutine(SmoothSnapToClosestPoint(snapSmoothTime));
+        StartCoroutine(SmoothSnapToClosestPoint(snapSmoothTime, false));
         transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
     }
 
@@ -210,6 +232,12 @@ public class CardBase : MonoBehaviour
             
         }
     }
+    public void DiscardCard()
+    {
+        isDragging = false;
+        StartCoroutine(SmoothSnapToClosestPoint(0.12f, true));
+        transform.DOScale(new Vector2(1f, 1f), 0.3f).SetEase(Ease.OutBounce);
+    }
 
     private Vector3 GetMouseWorldPosition()
     {
@@ -218,12 +246,22 @@ public class CardBase : MonoBehaviour
         return mainCamera.ScreenToWorldPoint(mousePoint);
     }
 
-    private IEnumerator SmoothSnapToClosestPoint(float snapSmoothTime_)
+    private IEnumerator SmoothSnapToClosestPoint(float snapSmoothTime_, bool discard_)
     {
         float minDistance = Mathf.Infinity;
         Transform closestPoint = null;
+        List<Transform> mySnapPoints = new List<Transform>();
 
-        foreach (Transform snapPoint in GameControl.instance.currentThreeSnapPoints)
+        if (discard_)
+        {
+            mySnapPoints = GameControl.instance.playerHandSnapPoints;
+        }
+        else
+        {
+            mySnapPoints = GameControl.instance.currentThreeSnapPoints;
+        }
+
+        foreach (Transform snapPoint in mySnapPoints)
         {
             // Check if the snap point is not occupied
             if (!snapPoint.GetComponent<SlotBase>().isOccupied)
@@ -263,11 +301,20 @@ public class CardBase : MonoBehaviour
             currentSlotBase = closestPoint.GetComponent<SlotBase>();
             currentSlotBase.SetOccupied(true);
 
-            AdjustEnergyOnSlotChange();
+            if (!discard_)
+            {
+                AdjustEnergyOnSlotChange(discard_);
+            }
+            else
+            {
+                //GameControl.instance.currentCardsInPlay.Remove(this);
+                isCardPlaced = false;
+            }
         }
     }
 
-    private IEnumerator SmoothSpawnToClosestPoint(float snapSmoothTime_, SlotType mySlotType_)
+
+    private IEnumerator SmoothSpawnToClosestPoint(float snapSmoothTime_, SlotType mySlotType_, bool discard_)
     {
         float minDistance = Mathf.Infinity;
         Transform closestPoint = null;
@@ -288,6 +335,7 @@ public class CardBase : MonoBehaviour
 
         foreach (Transform snapPoint in mySnapPoints)
         {
+            yield return new WaitForSeconds(0.1f);
             // Check if the snap point is not occupied
             if (!snapPoint.GetComponent<SlotBase>().isOccupied)
             {
@@ -327,7 +375,7 @@ public class CardBase : MonoBehaviour
             currentSlotBase = closestPoint.GetComponent<SlotBase>();
             currentSlotBase.SetOccupied(true);
 
-            AdjustEnergyOnSlotChange();
+            AdjustEnergyOnSlotChange(discard_);
 
         }
     }
@@ -357,7 +405,7 @@ public class CardBase : MonoBehaviour
 
     #region Card Energy
 
-    private void AdjustEnergyOnSlotChange()
+    private void AdjustEnergyOnSlotChange(bool discard_)
     {
        
         switch (mySlotType)
@@ -369,7 +417,7 @@ public class CardBase : MonoBehaviour
 
                 if (previousSlotBase.slotType != currentSlotBase.slotType)
                 {
-                    CheckCardType();
+                    CheckCardType(discard_);
                 }
                 break;
 
@@ -377,13 +425,13 @@ public class CardBase : MonoBehaviour
                 if (currentSlotBase == null)
                     return;
 
-                CheckCardType();
+                CheckCardType(discard_);
                 break;
         }
 
     }
 
-    private void CheckCardType()
+    private void CheckCardType(bool discard_)
     {
         Debug.Log("Adjusting Slot");
 
@@ -394,13 +442,17 @@ public class CardBase : MonoBehaviour
                 switch (currentSlotBase.slotType)
                 {
                     case SlotBase.SlotType.CardSlot:
+                        GameControl.instance.currentCardsInPlay.Add(this);
                         GameControl.instance.TakeEnergy(cardEnergy);
-                        IncreaseCardPowerToStat();
+                        IncreaseCardPowerToStat(discard_);
+                        isCardPlaced = true;
                         break;
 
                     case SlotBase.SlotType.HandSlot:
+                        GameControl.instance.currentCardsInPlay.Remove(this);
                         GameControl.instance.AddEnergy(cardEnergy);
-                        DecreaseCardPowerToStat();
+                        DecreaseCardPowerToStat(discard_);
+                        isCardPlaced = false;
                         break;
 
                 }
@@ -408,7 +460,7 @@ public class CardBase : MonoBehaviour
                 break;
 
             case SlotType.Cpu:
-                IncreaseCardPowerToStat();
+                IncreaseCardPowerToStat(discard_);
 
                 break;
         }
@@ -465,7 +517,7 @@ public class CardBase : MonoBehaviour
     #endregion
 
     #region Card Power
-    public void IncreaseCardPowerToStat()
+    public void IncreaseCardPowerToStat(bool discard_)
     {
         switch (mySlotType)
         {
@@ -474,10 +526,30 @@ public class CardBase : MonoBehaviour
                 {
                     case CardTypes.Attack:
                         GameControl.instance.IncreasePlayerAttack(cardPower);
+                        
+                       
                         break;
 
                     case CardTypes.Defense:
                         GameControl.instance.IncreasePlayerDefense(cardPower);
+                       
+                      
+                        break;
+
+                    case CardTypes.Strength:
+                        if (discard_)
+                        {
+
+                        }
+                        GameControl.instance.MultiplyPlayerAttack(cardPower);
+                        break;
+
+                    case CardTypes.Dexterity:
+                        if (discard_)
+                        {
+
+                        }
+                        GameControl.instance.MultiplyPlayerDefense(cardPower);
                         break;
                 }
                 break;
@@ -498,7 +570,9 @@ public class CardBase : MonoBehaviour
         
     }
 
-    public void DecreaseCardPowerToStat()
+    
+    
+    public void DecreaseCardPowerToStat(bool discard_)
     {
         switch (mySlotType)
         {
@@ -507,10 +581,30 @@ public class CardBase : MonoBehaviour
                 {
                     case CardTypes.Attack:
                         GameControl.instance.DecreasePlayerAttack(cardPower);
+                        Invoke("DelayedDiscardStrength", .1f);
+                      
                         break;
 
                     case CardTypes.Defense:
                         GameControl.instance.DecreasePlayerDefense(cardPower);
+                        Invoke("DelayedDiscardDexterity", .1f);
+                      
+                        break;
+
+                    case CardTypes.Strength:
+                        if (discard_)
+                        {
+
+                        }
+                        GameControl.instance.DemultiplyPlayerAttack(cardPower);
+                        break;
+
+                    case CardTypes.Dexterity:
+                        if (discard_)
+                        {
+
+                        }
+                        GameControl.instance.DemultiplyPlayerDefense(cardPower);
                         break;
                 }
                 break;
@@ -523,4 +617,25 @@ public class CardBase : MonoBehaviour
     }
     #endregion
 
+    void DelayedDiscardStrength()
+    {
+        for (int i = 0; i < GameControl.instance.currentCardsInPlay.Count; i++)
+        {
+            if (GameControl.instance.currentCardsInPlay[i].myCardType == CardTypes.Strength)
+            {
+                GameControl.instance.currentCardsInPlay[i].DiscardCard();
+            }
+        }
+    }
+
+    void DelayedDiscardDexterity()
+    {
+        for (int i = 0; i < GameControl.instance.currentCardsInPlay.Count; i++)
+        {
+            if (GameControl.instance.currentCardsInPlay[i].myCardType == CardTypes.Dexterity)
+            {
+                GameControl.instance.currentCardsInPlay[i].DiscardCard();
+            }
+        }
+    }
 }
